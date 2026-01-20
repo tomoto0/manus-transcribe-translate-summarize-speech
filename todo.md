@@ -27,4 +27,5 @@
 - [x] LLMプロンプトの改善（余計なエイの返事を削除）
 - [x] Markdown記法寯応（AI Summaryボックス）
 - [x] presentation-notes.txtの改行調整
+- [x] SEO対応（メタキーワードと説明の追加）
 
