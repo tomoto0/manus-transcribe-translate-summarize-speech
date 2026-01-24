@@ -9,6 +9,7 @@ const sessionData: Record<
     transcript: string;
     deepgramCalls: number;
     accumulatedSize: number;
+    language: string;
   }
 > = {};
 
@@ -16,7 +17,7 @@ const sessionData: Record<
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY || "";
 const DEEPGRAM_URL = "https://api.deepgram.com/v1/listen";
 
-async function transcribeWithDeepgram(audioBuffer: Buffer): Promise<string | null> {
+async function transcribeWithDeepgram(audioBuffer: Buffer, language: string = "en"): Promise<string | null> {
   try {
     if (!DEEPGRAM_API_KEY) {
       console.error("[DEEPGRAM ERROR] API key not found");
@@ -33,10 +34,11 @@ async function transcribeWithDeepgram(audioBuffer: Buffer): Promise<string | nul
       "Content-Type": "audio/webm",
     };
 
+    console.log(`[DEEPGRAM] Using language: ${language}`);
     const params = new URLSearchParams({
       model: "nova-2",
       smart_format: "true",
-      language: "en",
+      language: language,
       punctuate: "true",
       diarize: "false",
     });
@@ -192,12 +194,15 @@ export function createAudioRoutes(): Router {
   // Start session
   router.post("/api/start-session", async (req: Request, res: Response) => {
     try {
+      const { language = "en" } = req.body;
       const sessionId = uuidv4();
       sessionData[sessionId] = {
         transcript: "",
         deepgramCalls: 0,
         accumulatedSize: 0,
+        language: language,
       };
+      console.log(`[SESSION] Language set to: ${language}`);
 
       console.log(`[SESSION] Started: ${sessionId}`);
 
@@ -240,7 +245,8 @@ export function createAudioRoutes(): Router {
       console.log(`[CHUNK] Session ${sessionId}, Chunk ${chunkNumber}: ${audioData.length} bytes`);
 
       // Transcribe with Deepgram
-      const transcription = await transcribeWithDeepgram(audioData);
+      const language = sessionData[sessionId].language || "en";
+      const transcription = await transcribeWithDeepgram(audioData, language);
 
       if (transcription) {
         const currentTranscript = sessionData[sessionId].transcript;

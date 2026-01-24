@@ -122,6 +122,44 @@
             font-size: 24px;
         }
 
+        .input-language-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .input-language-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .input-language-select {
+            padding: 8px 12px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            background: white;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .input-language-select:hover {
+            border-color: #764ba2;
+        }
+
+        .input-language-select:focus {
+            outline: none;
+            border-color: #764ba2;
+            box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1);
+        }
+
         .controls {
             display: flex;
             gap: 10px;
@@ -383,6 +421,26 @@
         <main class="main">
             <!-- Recording Controls -->
             <section class="recording-section">
+                <div class="input-language-container">
+                    <label for="inputLanguageSelect" class="input-language-label">🎙️ Input Language:</label>
+                    <select id="inputLanguageSelect" class="input-language-select">
+                        <option value="en">English</option>
+                        <option value="ja">Japanese (日本語)</option>
+                        <option value="es">Spanish (Español)</option>
+                        <option value="zh">Chinese (中文)</option>
+                        <option value="fr">French (Français)</option>
+                        <option value="de">German (Deutsch)</option>
+                        <option value="it">Italian (Italiano)</option>
+                        <option value="ko">Korean (한국어)</option>
+                        <option value="pt">Portuguese (Português)</option>
+                        <option value="ru">Russian (Русский)</option>
+                        <option value="ar">Arabic (العربية)</option>
+                        <option value="hi">Hindi (हिन्दी)</option>
+                        <option value="id">Indonesian (Bahasa Indonesia)</option>
+                        <option value="nl">Dutch (Nederlands)</option>
+                        <option value="tr">Turkish (Türkçe)</option>
+                    </select>
+                </div>
                 <div class="controls">
                     <button id="startBtn" class="btn btn-primary">
                         <span class="btn-icon">▶</span>
@@ -583,6 +641,7 @@
                 this.exportJsonBtn = document.getElementById('exportJsonBtn');
                 this.summaryTypeSelect = document.getElementById("summaryTypeSelect");
                 this.summaryLanguageSelect = document.getElementById("summaryLanguageSelect");
+                this.inputLanguageSelect = document.getElementById('inputLanguageSelect');
 
                 this.translationLanguageSelect = document.getElementById('translationLanguageSelect');
                 this.clearTranslationBtn = document.getElementById('clearTranslationBtn');
@@ -626,7 +685,21 @@
 
             async checkMicrophonePermission() {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    // Check if getUserMedia is supported
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        throw new Error('getUserMedia not supported in this browser');
+                    }
+                    
+                    // Try to get microphone access with more permissive constraints
+                    const constraints = {
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        }
+                    };
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
                     stream.getTracks().forEach(track => track.stop());
                     this.updateStatus('Ready to record', 'ready');
                 } catch (error) {
@@ -656,9 +729,13 @@
                     this.lastTranslatedText = "";
                     this.translationHistory = [];
                     
+                    const inputLanguage = this.inputLanguageSelect.value;
+                    console.log('[LANGUAGE] Selected input language:', inputLanguage);
+                    
                     const sessionResponse = await fetch('/api/start-session', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ language: inputLanguage })
                     });
                     
                     if (!sessionResponse.ok) {
@@ -669,14 +746,24 @@
                     this.sessionId = sessionData.session_id;
                     console.log('[SESSION] Started:', this.sessionId);
                     
-                    this.audioStream = await navigator.mediaDevices.getUserMedia({
+                    // Try to get microphone access with fallback constraints
+                    let audioConstraints = {
                         audio: {
                             sampleRate: 16000,
                             channelCount: 1,
                             echoCancellation: true,
-                            noiseSuppression: true
+                            noiseSuppression: true,
+                            autoGainControl: true
                         }
-                    });
+                    };
+                    
+                    try {
+                        this.audioStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+                    } catch (err) {
+                        // Fallback to basic audio constraints if advanced constraints fail
+                        console.warn('[RECORDING] Advanced constraints failed, trying basic constraints');
+                        this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    }
                     
                     this.mediaRecorder = new MediaRecorder(this.audioStream, {
                         mimeType: this.mimeType
