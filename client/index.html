@@ -699,7 +699,18 @@
                         }
                     };
                     
-                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    let stream;
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    } catch (err) {
+                        if (err.name === "NotReadableError") {
+                            console.warn("[PERMISSION] NotReadableError on check, waiting and retrying");
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        } else {
+                            throw err;
+                        }
+                    }
                     stream.getTracks().forEach(track => track.stop());
                     this.updateStatus('Ready to record', 'ready');
                 } catch (error) {
@@ -760,9 +771,20 @@
                     try {
                         this.audioStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
                     } catch (err) {
-                        // Fallback to basic audio constraints if advanced constraints fail
-                        console.warn('[RECORDING] Advanced constraints failed, trying basic constraints');
-                        this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        console.warn('[RECORDING] Advanced constraints failed:', err.name);
+                        if (err.name === 'NotReadableError') {
+                            console.warn('[RECORDING] NotReadableError detected, waiting 1s and retrying');
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            try {
+                                this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                            } catch (retryErr) {
+                                console.error('[RECORDING] Retry failed:', retryErr.name);
+                                throw retryErr;
+                            }
+                        } else {
+                            console.warn('[RECORDING] Trying basic audio constraints');
+                            this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        }
                     }
                     
                     this.mediaRecorder = new MediaRecorder(this.audioStream, {
