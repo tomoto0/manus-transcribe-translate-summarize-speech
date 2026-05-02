@@ -57,7 +57,7 @@ AI Presentation Notes is a full-stack web application that enables real-time spe
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Frontend (Browser)                       │
+│                     Frontend (Browser)                      │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
 │  │ Audio Input  │  │ Transcription│  │ Translation  │       │
 │  │ (Microphone) │  │   Display    │  │   Display    │       │
@@ -69,9 +69,9 @@ AI Presentation Notes is a full-stack web application that enables real-time spe
 └─────────────────────────────────────────────────────────────┘
                             ↓ HTTP/REST
 ┌─────────────────────────────────────────────────────────────┐
-│                    Backend (Express.js)                      │
+│                    Backend (Express.js)                     │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │              REST API Endpoints                       │   │
+│  │              REST API Endpoints                      │   │
 │  │  • POST /api/start-session                           │   │
 │  │  • POST /api/upload-chunk                            │   │
 │  │  • POST /api/stop-session                            │   │
